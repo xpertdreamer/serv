@@ -9,15 +9,21 @@
 #include <cstring>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/types.h>
+#include <netdb.h>
 #include <unistd.h>
 
 constexpr unsigned long PORT = 8080;
 
 int
 main(void) {
+    // TODO: rewrite with addrinfo
     char ipv4[INET_ADDRSTRLEN] = "127.0.0.1"; // 16 bytes
+    struct addrinfo hints, *ai;
     struct sockaddr_in sa;
     int sock = -1;
+
+    // ...
 
     // open socket
     if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_IP)) == -1) {
@@ -35,9 +41,12 @@ main(void) {
         std::exit(EXIT_FAILURE);
     }
 
+    // associate socket with port 'PORT' in sockaddr_in struct
     if (bind(sock, (struct sockaddr*)&sa, sizeof(sa)) == -1) {
         fprintf(stderr, "failed to bind: %s", std::strerror(errno));
         close(sock);
         std::exit(EXIT_FAILURE);
     }
+
+
 }
