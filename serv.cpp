@@ -1,7 +1,10 @@
 // references:
 // https://beej.us/guide/bgnet/pdf/bgnet_a4_c_1.pdf
 // man pages
-// TODO: logs
+
+// TODO: reorginize a little bit
+// TODO: own back shell (executor)
+// TODO: multithreading
 
 #include "log.h"
 
@@ -143,7 +146,7 @@ main(void) {
                     continue;
                 }
             }
-            buffer[recieved-1] = '\0';
+            buffer[recieved] = '\0';
             log_info("Recieved: %s", buffer);
             char send_buf[SIZE*2] = {0};
             snprintf(send_buf, sizeof(send_buf), "Accepted: %d bytes (%s)", recieved, buffer);
