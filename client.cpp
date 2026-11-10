@@ -60,7 +60,7 @@ main(int argc, char** argv) {
     sigaction(SIGINT, &psa, nullptr);
 
     if (argc < 3) {
-        puts("Usage: ./client hostname");
+        puts("Usage: ./client hostname port");
         std::exit(EXIT_FAILURE);
     }
 
