@@ -45,16 +45,6 @@ main(void) {
         std::exit(EXIT_FAILURE);
     }
 
-    // // setting up IPv4 socket address
-    // sa.sin_family = AF_INET;
-    // sa.sin_port = htons(PORT);
-    // // convert string address to network address representation
-    // if (inet_pton(AF_INET, ipv4, &(sa.sin_addr)) != 1) {
-    //     fprintf(stderr, "Could to turn ipv4 to network representation");
-    //     close(sock);
-    //     std::exit(EXIT_FAILURE);
-    // }
-
     // associate socket with port from addrinfo
     if (bind(sock, ai->ai_addr, ai->ai_addrlen) == -1) {
         fprintf(stderr, "failed to bind: %s", std::strerror(errno));
@@ -63,12 +53,14 @@ main(void) {
         std::exit(EXIT_FAILURE);
     }
     if ((setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes))) < 0) {
+        // TODO: under 'fail' label with goto, or smth like this
         fprintf(stderr, "setsockopt error: %s", std::strerror(errno));
         close(sock);
         freeaddrinfo(ai);
         std::exit(EXIT_FAILURE);
     }
 
-    // TODO: freeaddrinfo(ai); on exit
 
+    // TODO: freeaddrinfo(ai); on exit
+    return EXIT_SUCCESS;
 }
