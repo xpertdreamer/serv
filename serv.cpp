@@ -3,6 +3,8 @@
 // man pages
 // TODO: logs
 
+#include "logger.h"
+
 #include <arpa/inet.h>
 #include <asm-generic/socket.h>
 #include <atomic>
@@ -23,9 +25,8 @@ constexpr char ipv4[INET_ADDRSTRLEN] = "127.0.0.1";    // 16 bytes
 constexpr unsigned int BACKLOG = 1;    // 1 client
 constexpr const char *welcome_msg = "Hi, From serv";
 
-int sock = -1, newsock = -1;
-// TODO: sigint handler to gracefully shutdown
 std::atomic<int> run = 1;
+int sock = -1, newsock = -1;
 
 extern "C" void
 stop_handler(int sig) {
@@ -47,6 +48,13 @@ main(void) {
     psa.sa_flags = 0;
     sigaction(SIGINT, &psa, nullptr);
 
+
+    // open log file
+    if (!Logger::instance().open("test.log")) {
+        fprintf(stderr, "Failed to open log file");
+        std::exit(EXIT_FAILURE);
+    }
+
     // get info about address
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;   // IPv4
@@ -63,6 +71,7 @@ main(void) {
         freeaddrinfo(ai);
         std::exit(EXIT_FAILURE);
     }
+    fexcept(LEVEL::INFO, "socket successfully created");
 
     // associate socket with port from addrinfo
     if ((setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes))) < 0) {
@@ -114,7 +123,7 @@ main(void) {
                     continue;
                 }
             }
-            fprintf(stdout, "%s", buffer);
+            fprintf(stdout, "Recieved: %s", buffer);
             buffer[recieved-1] = '\0';
             char send_buf[SIZE*2] = {0};
             snprintf(send_buf, sizeof(send_buf), "Accepted: %d bytes (%s)", recieved, buffer);
