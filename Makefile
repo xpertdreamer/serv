@@ -1,13 +1,8 @@
 all: a b
 
-serv:
-	g++ -Wall -Wextra -o serv serv.cpp
+serv: serv.cpp log.c
+	g++ -Wall -Wextra -o serv serv.cpp -x c log.c
 
-b:
-	gcc -o b b.c
-
-a:
-	gcc -o a a.c
 
 clean:
 	rm -f a b serv
