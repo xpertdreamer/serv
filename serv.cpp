@@ -1,6 +1,7 @@
 // references:
 // https://beej.us/guide/bgnet/pdf/bgnet_a4_c_1.pdf
 // man pages
+// TODO: logs
 
 #include <arpa/inet.h>
 #include <asm-generic/socket.h>
@@ -16,6 +17,7 @@
 #include <netdb.h>
 #include <unistd.h>
 
+constexpr size_t SIZE = 1024;
 constexpr const char* PORT_STR = "8080";
 constexpr char ipv4[INET_ADDRSTRLEN] = "127.0.0.1";    // 16 bytes
 constexpr unsigned int BACKLOG = 1;    // 1 client
@@ -96,11 +98,28 @@ main(void) {
             continue;
         }
 
+        char buffer[SIZE] = {0};
+        int recieved;
         puts("connected");
         // handle connection in another loop
         if (run.load()) {
-            int len = strlen(welcome_msg), sent;
-            if ((sent = send(newsock, welcome_msg, len, 0)) < len) {
+            if ((recieved = recv(newsock, &buffer, SIZE - 1, 0)) <= 0) {
+                fprintf(stderr, "failed to recieve bytes");
+                if (recieved == 0) {
+                    close(newsock);
+                    continue;
+                } else {
+                    fprintf(stderr, ": %s", std::strerror(errno));
+                    close(newsock);
+                    continue;
+                }
+            }
+            fprintf(stdout, "%s", buffer);
+            buffer[recieved-1] = '\0';
+            char send_buf[SIZE*2] = {0};
+            snprintf(send_buf, sizeof(send_buf), "Accepted: %d bytes (%s)", recieved, buffer);
+            int len = strlen(send_buf), sent;
+            if ((sent = send(newsock, send_buf, len, 0)) < len) {
                 fprintf(stderr, "failed to send all data");
                 if (sent == -1) {
                     fprintf(stderr, ": %s", std::strerror(errno));
