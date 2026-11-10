@@ -15,14 +15,17 @@
 #include <unistd.h>
 
 constexpr const char* PORT_STR = "8080";
-constexpr char ipv4[INET_ADDRSTRLEN] = "127.0.0.1"; // 16 bytes
+constexpr char ipv4[INET_ADDRSTRLEN] = "127.0.0.1";    // 16 bytes
+constexpr unsigned int BACKLOG = 1; // 1 client
 
 int
 main(void) {
     short status;
+    struct sockaddr_storage incoming;
+    socklen_t addr_size;
     struct addrinfo hints, *ai;
     struct sockaddr_in sa;
-    int sock = -1;
+    int sock = -1, newsock = -1;
     int yes = 1;
 
     // get info about address
@@ -57,6 +60,25 @@ main(void) {
         std::exit(EXIT_FAILURE);
     }
 
+    // listen up to socket to queue incoming connections
+    if (listen(sock, BACKLOG) < 0) {
+        fprintf(stderr, "listen error: %s", std::strerror(errno));
+        close(sock);
+        freeaddrinfo(ai);
+        std::exit(EXIT_FAILURE);
+    }
+
+    // TODO: can i close listening socket if im gonna take only 1 connection
+    // accept incoming calls
+    addr_size = sizeof(incoming);
+    while (true) {
+        if ((newsock = accept(sock, (struct sockaddr*)&incoming, &addr_size)) == -1) {
+            fprintf(stderr, "failed to accept client: %s", std::strerror(errno));
+            continue;
+        }
+
+        // handle connection in another loop
+    }
 
 
     // TODO: freeaddrinfo(ai); on exit
