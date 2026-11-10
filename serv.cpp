@@ -14,9 +14,7 @@
 #include <netdb.h>
 #include <unistd.h>
 
-constexpr unsigned long PORT = 8080;
 constexpr const char* PORT_STR = "8080";
-
 
 int
 main(void) {
