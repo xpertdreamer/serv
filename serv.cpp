@@ -4,6 +4,8 @@
 
 #include <arpa/inet.h>
 #include <asm-generic/socket.h>
+#include <atomic>
+#include <csignal>
 #include <cstdio>
 #include <cerrno>
 #include <cstdlib>
@@ -16,7 +18,19 @@
 
 constexpr const char* PORT_STR = "8080";
 constexpr char ipv4[INET_ADDRSTRLEN] = "127.0.0.1";    // 16 bytes
-constexpr unsigned int BACKLOG = 1; // 1 client
+constexpr unsigned int BACKLOG = 1;    // 1 client
+constexpr const char *welcome_msg = "Hi, From serv";
+
+int sock = -1, newsock = -1;
+// TODO: sigint handler to gracefully shutdown
+std::atomic<int> run = 1;
+
+extern "C" void
+stop_handler(int sig) {
+    (void)sig;
+    run.store(0);
+    std::fflush(stdout);
+}
 
 int
 main(void) {
@@ -24,9 +38,12 @@ main(void) {
     struct sockaddr_storage incoming;
     socklen_t addr_size;
     struct addrinfo hints, *ai;
-    struct sockaddr_in sa;
-    int sock = -1, newsock = -1;
     int yes = 1;
+
+    struct sigaction psa;
+    psa.sa_handler = &stop_handler;
+    psa.sa_flags = 0;
+    sigaction(SIGINT, &psa, nullptr);
 
     // get info about address
     memset(&hints, 0, sizeof(hints));
@@ -46,12 +63,6 @@ main(void) {
     }
 
     // associate socket with port from addrinfo
-    if (bind(sock, ai->ai_addr, ai->ai_addrlen) == -1) {
-        fprintf(stderr, "failed to bind: %s", std::strerror(errno));
-        close(sock);
-        freeaddrinfo(ai);
-        std::exit(EXIT_FAILURE);
-    }
     if ((setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes))) < 0) {
         // TODO: under 'fail' label with goto, or smth like this
         fprintf(stderr, "setsockopt error: %s", std::strerror(errno));
@@ -59,28 +70,48 @@ main(void) {
         freeaddrinfo(ai);
         std::exit(EXIT_FAILURE);
     }
+    if (bind(sock, ai->ai_addr, ai->ai_addrlen) == -1) {
+        fprintf(stderr, "failed to bind: %s", std::strerror(errno));
+        close(sock);
+        freeaddrinfo(ai);
+        std::exit(EXIT_FAILURE);
+    }
+
+    freeaddrinfo(ai);
 
     // listen up to socket to queue incoming connections
     if (listen(sock, BACKLOG) < 0) {
         fprintf(stderr, "listen error: %s", std::strerror(errno));
         close(sock);
-        freeaddrinfo(ai);
         std::exit(EXIT_FAILURE);
     }
 
     // TODO: can i close listening socket if im gonna take only 1 connection
     // accept incoming calls
     addr_size = sizeof(incoming);
-    while (true) {
+    while (run.load()) {
         if ((newsock = accept(sock, (struct sockaddr*)&incoming, &addr_size)) == -1) {
+            if (errno == EINTR) break;
             fprintf(stderr, "failed to accept client: %s", std::strerror(errno));
             continue;
         }
 
+        puts("connected");
         // handle connection in another loop
+        if (run.load()) {
+            int len = strlen(welcome_msg), sent;
+            if ((sent = send(newsock, welcome_msg, len, 0)) < len) {
+                fprintf(stderr, "failed to send all data");
+                if (sent == -1) {
+                    fprintf(stderr, ": %s", std::strerror(errno));
+                } else fprintf(stderr, "\n");
+            }
+        }
+        close(newsock);
+        puts("disconnected");
     }
 
-
-    // TODO: freeaddrinfo(ai); on exit
+    // unreacheable?
+    close(sock);
     return EXIT_SUCCESS;
 }

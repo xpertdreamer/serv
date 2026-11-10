@@ -10,4 +10,4 @@ a:
 	gcc -o a a.c
 
 clean:
-	rm -f a b
+	rm -f a b serv
