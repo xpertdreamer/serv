@@ -3,6 +3,7 @@
 // man pages
 
 #include <arpa/inet.h>
+#include <asm-generic/socket.h>
 #include <cstdio>
 #include <cerrno>
 #include <cstdlib>
@@ -14,39 +15,60 @@
 #include <unistd.h>
 
 constexpr unsigned long PORT = 8080;
+constexpr const char* PORT_STR = "8080";
+
 
 int
 main(void) {
     // TODO: rewrite with addrinfo
     char ipv4[INET_ADDRSTRLEN] = "127.0.0.1"; // 16 bytes
+    short status;
     struct addrinfo hints, *ai;
     struct sockaddr_in sa;
     int sock = -1;
+    int yes = 1;
 
-    // ...
+    // get info about address
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;   // IPv4
+    hints.ai_socktype = SOCK_STREAM;  // TCP
+    hints.ai_flags = AI_PASSIVE;   // set up address on its own
+    if ((status = getaddrinfo(ipv4, PORT_STR, &hints, &ai)) != 0) {
+        fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(status));
+        std::exit(EXIT_FAILURE);
+    }
 
     // open socket
-    if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_IP)) == -1) {
+    if ((sock = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol)) == -1) {
         fprintf(stderr, "cannot create socket: %s", std::strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-
-    // setting up IPv4 socket address
-    sa.sin_family = AF_INET;
-    sa.sin_port = htons(PORT);
-    // convert string address to network address representation
-    if (inet_pton(AF_INET, ipv4, &(sa.sin_addr)) != 1) {
-        fprintf(stderr, "Could to turn ipv4 to network representation");
-        close(sock);
+        freeaddrinfo(ai);
         std::exit(EXIT_FAILURE);
     }
 
-    // associate socket with port 'PORT' in sockaddr_in struct
-    if (bind(sock, (struct sockaddr*)&sa, sizeof(sa)) == -1) {
+    // // setting up IPv4 socket address
+    // sa.sin_family = AF_INET;
+    // sa.sin_port = htons(PORT);
+    // // convert string address to network address representation
+    // if (inet_pton(AF_INET, ipv4, &(sa.sin_addr)) != 1) {
+    //     fprintf(stderr, "Could to turn ipv4 to network representation");
+    //     close(sock);
+    //     std::exit(EXIT_FAILURE);
+    // }
+
+    // associate socket with port from addrinfo
+    if (bind(sock, ai->ai_addr, ai->ai_addrlen) == -1) {
         fprintf(stderr, "failed to bind: %s", std::strerror(errno));
         close(sock);
+        freeaddrinfo(ai);
+        std::exit(EXIT_FAILURE);
+    }
+    if ((setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes))) < 0) {
+        fprintf(stderr, "setsockopt error: %s", std::strerror(errno));
+        close(sock);
+        freeaddrinfo(ai);
         std::exit(EXIT_FAILURE);
     }
 
+    // TODO: freeaddrinfo(ai); on exit
 
 }
