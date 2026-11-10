@@ -16,3 +16,17 @@ Basically like this:
         std::exit(EXIT_FAILURE);
     }
 ```
+
+To listen incoming connections the sequence of syscalls will be:
+
+```c++
+getaddrinfo();
+socket();
+bind();
+listen();
+/* accept() goes here */
+```
+
+According to [Beej’s Guide to Network Programming](https://beej.us/guide/bgnet/pdf/bgnet_a4_c_1.pdf)
+
+

@@ -15,11 +15,10 @@
 #include <unistd.h>
 
 constexpr const char* PORT_STR = "8080";
+constexpr char ipv4[INET_ADDRSTRLEN] = "127.0.0.1"; // 16 bytes
 
 int
 main(void) {
-    // TODO: rewrite with addrinfo
-    char ipv4[INET_ADDRSTRLEN] = "127.0.0.1"; // 16 bytes
     short status;
     struct addrinfo hints, *ai;
     struct sockaddr_in sa;
@@ -57,6 +56,7 @@ main(void) {
         freeaddrinfo(ai);
         std::exit(EXIT_FAILURE);
     }
+
 
 
     // TODO: freeaddrinfo(ai); on exit
