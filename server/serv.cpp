@@ -126,6 +126,7 @@ main(void) {
 
     // accept incoming calls
     addr_size = sizeof(incoming);
+    // NOTE: To accept clients forever, wrap everything from here to just before newsock close() in a loop
     if ((newsock = accept(sock, (struct sockaddr*)&incoming, &addr_size)) == -1) {
         log_error("failed to accept client: %s", std::strerror(errno));
         if (errno == EINTR) {
