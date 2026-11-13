@@ -1,8 +1,13 @@
 // TODO: reorginize a little bit
 // TODO: multithreading or async
+/* TODO: client should only send and accept, but should not validate nad etc.
+*        so this part of the program should have a unified interface for exchanging data
+*        with the server
+*/
 
 #include "log.h"
 #include "shell.h"
+#include "util.h"
 
 #include <arpa/inet.h>
 #include <csignal>
@@ -15,17 +20,8 @@
 #include <unistd.h>
 
 #include <string>
-#include <chrono>
-#include <format>
-
-constexpr std::string logdir = "logs/";
 
 extern void help_handler(int);
-
-enum class ERRORS {
-    CON_FAIL = 2,
-    SH_ALLOC = 3,
-};
 
 int sock = -1;
 bool run = true;
@@ -34,14 +30,6 @@ extern "C" void
 stop_handler(int) {
     run = false;
     std::fflush(stdout);
-}
-
-// TODO: into util
-const std::string
-get_time() {
-    auto now = std::chrono::system_clock::now();
-    const std::string result = std::format("{:%Y-%m-%d_%H:%M:%S}", now);
-    return result;
 }
 
 int

@@ -7,6 +7,7 @@
 // TODO: multithreading
 
 #include "log.h"
+#include "util.h"
 
 #include <arpa/inet.h>
 #include <asm-generic/socket.h>
@@ -23,14 +24,11 @@
 #include <unistd.h>
 
 #include <string>
-#include <chrono>
-#include <format>
 
 constexpr size_t SIZE = 1024;
 constexpr const char* PORT_STR = "8080";
 constexpr char ipv4[INET_ADDRSTRLEN] = "127.0.0.1";    // 16 bytes localhost
 constexpr unsigned int BACKLOG = 1;   // 1 client
-constexpr std::string logdir = "logs/";
 
 std::atomic<int> run = 1;
 int sock = -1, newsock = -1;
@@ -40,14 +38,6 @@ stop_handler(int sig) {
     (void)sig;
     run.store(0);
     std::fflush(stdout);
-}
-
-// TODO: into util
-const std::string
-get_time() {
-    auto now = std::chrono::system_clock::now();
-    const std::string result = std::format("{:%Y-%m-%d_%H:%M:%S}", now);
-    return result;
 }
 
 int

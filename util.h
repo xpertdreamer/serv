@@ -8,6 +8,13 @@
 
 #include "conf.h"
 
+#ifdef __cplusplus
+#include <string>
+#include <format>
+#include <chrono>
+#include <iostream>
+#endif
+
 #ifndef _WIN32
 #define ERROR_COLOR "\e[1;31m"  ///< ANSI red color for error messages.
 #define DEBUG_COLOR "\e[1;34m"  ///< ANSI blue color for debug messages.
@@ -70,5 +77,21 @@ do {                                            \
         return NULL;                            \
     }                                           \
 } while (0)
+
+#ifdef __cplusplus
+constexpr std::string logdir = "logs/";
+
+enum class ERRORS {
+    CON_FAIL = 2,
+    SH_ALLOC = 3,
+};
+
+const std::string
+get_time() {
+    auto now = std::chrono::system_clock::now();
+    const std::string result = std::format("{:%Y-%m-%d_%H:%M:%S}", now);
+    return result;
+}
+#endif
 
 #endif
