@@ -1,11 +1,14 @@
-all: serv client
+all: buildir serv cl
 	mkdir -p logs/
 
-serv: serv.cpp log.c
-	g++ -Wall -Wextra -g -o serv serv.cpp -x c log.c
+serv: server/serv.cpp log.c
+	g++ -Wall -Wextra -I. -Iserver -g -o build/serv server/serv.cpp -x c log.c
 
-client: client.cpp log.c shell.c
-	g++ -Wall -Wextra -g -o client client.cpp handlers.cpp -x c log.c -x c shell.c
+cl: client/client.cpp log.c shell.c
+	g++ -Wall -Wextra -I. -Iclient -g -o build/client client/client.cpp client/handlers.cpp -x c log.c -x c shell.c
+
+buildir:
+	mkdir -p build/
 
 clean:
-	rm -rf serv client logs/
+	rm -rf build/serv build/client logs/
