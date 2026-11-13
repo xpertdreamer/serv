@@ -134,17 +134,15 @@ main(void) {
         int recieved;
         log_info("connected");
         // handle connection in another loop
-        if (run.load()) {
+        while (run.load()) {
             if ((recieved = recv(newsock, &buffer, SIZE - 1, 0)) <= 0) {
-                log_warn("failed to recieve bytes");
-                if (recieved == 0) {
-                    close(newsock);
-                    continue;
-                } else {
-                    log_warn(": %s", std::strerror(errno));
-                    close(newsock);
+                if (recieved < 0 && errno == EINTR) {
+                    if (!run.load()) break;
                     continue;
                 }
+                if (recieved == 0) log_info("client closed the connection");
+                else log_warn("recv failed: %s", std::strerror(errno));
+                break;
             }
             buffer[recieved] = '\0';
             log_info("Recieved: %s", buffer);
@@ -159,6 +157,7 @@ main(void) {
             }
         }
         close(newsock);
+        newsock = -1;
         log_info("disconnected");
     }
 
