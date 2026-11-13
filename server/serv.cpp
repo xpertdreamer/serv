@@ -60,6 +60,9 @@ main(void) {
     int yes = 1;
     std::string logfile_name = logdir + get_time() + ".log";
 
+    char buffer[SIZE] = {0};
+    int recieved;
+
     struct sigaction psa;
     psa.sa_handler = &stop_handler;
     psa.sa_flags = 0;
@@ -123,44 +126,42 @@ main(void) {
 
     // accept incoming calls
     addr_size = sizeof(incoming);
-    while (run.load()) {
-        if ((newsock = accept(sock, (struct sockaddr*)&incoming, &addr_size)) == -1) {
-            if (errno == EINTR) break;
-            log_error("failed to accept client: %s", std::strerror(errno));
-            continue;
+    if ((newsock = accept(sock, (struct sockaddr*)&incoming, &addr_size)) == -1) {
+        log_error("failed to accept client: %s", std::strerror(errno));
+        if (errno == EINTR) {
+            goto end;
         }
-
-        char buffer[SIZE] = {0};
-        int recieved;
-        log_info("connected");
-        // handle connection in another loop
-        while (run.load()) {
-            if ((recieved = recv(newsock, &buffer, SIZE - 1, 0)) <= 0) {
-                if (recieved < 0 && errno == EINTR) {
-                    if (!run.load()) break;
-                    continue;
-                }
-                if (recieved == 0) log_info("client closed the connection");
-                else log_warn("recv failed: %s", std::strerror(errno));
-                break;
-            }
-            buffer[recieved] = '\0';
-            log_info("Recieved: %s", buffer);
-            char send_buf[SIZE*2] = {0};
-            snprintf(send_buf, sizeof(send_buf), "Accepted: %d bytes (%s)", recieved, buffer);
-            int len = strlen(send_buf), sent;
-            if ((sent = send(newsock, send_buf, len, 0)) < len) {
-                log_error("failed to send all data");
-                if (sent == -1) {
-                    log_error(": %s", std::strerror(errno));
-                }
-            }
-        }
-        close(newsock);
-        newsock = -1;
-        log_info("disconnected");
     }
 
+    log_info("connected");
+    // handle connection in another loop
+    while (run.load()) {
+        if ((recieved = recv(newsock, &buffer, SIZE - 1, 0)) <= 0) {
+            if (recieved < 0 && errno == EINTR) {
+                if (!run.load()) break;
+                continue;
+            }
+            if (recieved == 0) log_info("client closed the connection");
+            else log_warn("recv failed: %s", std::strerror(errno));
+            break;
+        }
+        buffer[recieved] = '\0';
+        log_info("Recieved: %s", buffer);
+        char send_buf[SIZE*2] = {0};
+        snprintf(send_buf, sizeof(send_buf), "Accepted: %d bytes (%s)", recieved, buffer);
+        int len = strlen(send_buf), sent;
+        if ((sent = send(newsock, send_buf, len, 0)) < len) {
+            log_error("failed to send all data");
+            if (sent == -1) {
+                log_error(": %s", std::strerror(errno));
+            }
+        }
+    }
+    close(newsock);
+    newsock = -1;
+
+end:
+    log_info("disconnected");
     log_info("shutting down (%s)", get_time().c_str());
     fclose(flog);
     close(sock);
