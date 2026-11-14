@@ -3,6 +3,7 @@
 #include "util.h"
 #include "shell.h"
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -69,11 +70,25 @@ sh_execute(shell* instance, const char* name)
         }
         if (strcmp(cm.name, name) == 0) {
             DEBUG("called %s", name);
-            instance->commands[i].handler();
+            const char* result = instance->commands[i].handler();
+            int len = strlen(result), sent;
+            if ((sent = send(instance->fd, result, len, 0)) < len) {
+                ERROR("failed to send all data");
+                if (sent == -1) {
+                    ERROR(": %s", strerror(errno));
+                }
+            }
             return;
         }
     }
-    ERROR("cannot find command [%s] in current instance", name);
+    const char* result = SH_ERROR("cannot find command [%s] in current instance", name);
+    int len = strlen(result), sent;
+    if ((sent = send(instance->fd, result, len, 0)) < len) {
+        ERROR("failed to send all data");
+        if (sent == -1) {
+            ERROR(": %s", strerror(errno));
+        }
+    }
 }
 
 void

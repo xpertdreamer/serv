@@ -8,6 +8,7 @@
 
 #include "log.h"
 #include "util.h"
+#include "shell.h"
 
 #include <arpa/inet.h>
 #include <asm-generic/socket.h>
@@ -40,6 +41,8 @@ stop_handler(int sig) {
     std::fflush(stdout);
 }
 
+extern const char* help_handler();
+
 int
 main(void) {
     FILE* flog = NULL;
@@ -49,6 +52,9 @@ main(void) {
     struct addrinfo hints, *ai;
     int yes = 1;
     std::string logfile_name = logdir + get_time() + ".log";
+
+    shell *sh = NULL;
+    cmd commands[1] = {{"help", help_handler}};
 
     char buffer[SIZE] = {0};
     int recieved;
@@ -124,6 +130,7 @@ main(void) {
         }
     }
 
+    sh = sh_create(commands, 1, newsock);
     log_info("connected");
     // handle connection in another loop
     while (run.load()) {
@@ -138,15 +145,16 @@ main(void) {
         }
         buffer[recieved] = '\0';
         log_info("Recieved: %s", buffer);
-        char send_buf[SIZE*2] = {0};
-        snprintf(send_buf, sizeof(send_buf), "Accepted: %d bytes (%s)", recieved, buffer);
-        int len = strlen(send_buf), sent;
-        if ((sent = send(newsock, send_buf, len, 0)) < len) {
-            log_error("failed to send all data");
-            if (sent == -1) {
-                log_error(": %s", std::strerror(errno));
-            }
-        }
+        sh_execute(sh, buffer);
+        // char send_buf[SIZE*2] = {0};
+        // snprintf(send_buf, sizeof(send_buf), "Accepted: %d bytes (%s)", recieved, buffer);
+        // int len = strlen(send_buf), sent;
+        // if ((sent = send(newsock, send_buf, len, 0)) < len) {
+        //     log_error("failed to send all data");
+        //     if (sent == -1) {
+        //         log_error(": %s", std::strerror(errno));
+        //     }
+        // }
     }
     close(newsock);
     newsock = -1;
@@ -154,6 +162,7 @@ main(void) {
 end:
     log_info("disconnected");
     log_info("shutting down (%s)", get_time().c_str());
+    sh_destroy(sh);
     fclose(flog);
     close(sock);
     return EXIT_SUCCESS;

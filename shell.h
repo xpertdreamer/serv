@@ -8,6 +8,10 @@
 // while(sh_daemon(sh));                                  // run daemon to listen user input and execute
 // sh_destroy(sh);                                        // free memory on exit
 
+#include "util.h"
+
+#include <stdio.h>
+#include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -17,6 +21,18 @@ extern "C" {
 #endif
 
 #define RESPONSE_SIZE 1024
+
+static inline const char*
+format_error_impl(const char* fmt, ...) {
+    static char buffer[1024];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+    return buffer;
+}
+
+#define SH_ERROR(msg, ...) format_error_impl(ERROR_COLOR msg RESET_COLOR, ##__VA_ARGS__)
 
 typedef enum {
     EXCHANGE = 0,
@@ -34,7 +50,7 @@ typedef uint16_t u32;
 
 typedef struct {
     const char* name;
-    void (*handler)();
+    const char* (*handler)();
 } cmd;
 
 
