@@ -1,32 +1,36 @@
-#include "util.h"
+// NOTE: this version is adapted to client
 
+#include "util.h"
 #include "shell.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
 #include <unistd.h>
 #include <stdbool.h>
 
 shell*
 sh_create(cmd* commands, size_t len, int fd)
 {
-    PTR_RECIEVE_FAIL_PTR(commands, sh_create);
     shell *sh = NULL;
 
     sh = (shell*)malloc(sizeof(shell));
     ALLOC_FAIL(sh);
-    sh->num_commands = len;
     sh->prompt = ">";
     sh->prompt_len = (uint32_t)strlen(sh->prompt);
-    sh->commands = (cmd*)malloc(sizeof(cmd) * len);
-    if (sh->commands == NULL) {
-        free(sh);
-        return NULL;
-    }
-    for (size_t i = 0; i < len; ++i) {
-        sh->commands[i] = commands[i];
-    }
+    if (commands != NULL) {
+        sh->num_commands = len;
+        sh->commands = (cmd*)malloc(sizeof(cmd) * len);
+        if (sh->commands == NULL) {
+            free(sh);
+            return NULL;
+        }
+        for (size_t i = 0; i < len; ++i) {
+            sh->commands[i] = commands[i];
+        }
+        sh->type = EXECUTE;
+    } else sh->type = EXCHANGE;
     sh->fd = fd;
     // TODO: log creation
 
@@ -65,11 +69,31 @@ sh_execute(shell* instance, const char* name)
         }
         if (strcmp(cm.name, name) == 0) {
             DEBUG("called %s", name);
-            instance->commands[i].handler(instance->fd);
+            instance->commands[i].handler();
             return;
         }
     }
     ERROR("cannot find command [%s] in current instance", name);
+}
+
+void
+sh_exchange(shell* instance, const char* name) {
+    PTR_RECIEVE_FAIL_VOID(instance, sh_exchange);
+    if (instance->fd == -1) {
+        ERROR("cannot establish connection with the server");
+        return;
+    }
+
+    int len = strlen(name), sent, recieved;
+    char buf[RESPONSE_SIZE];
+    if ((sent = send(instance->fd, name, len, 0)) < len) {
+        ERROR("failed to send data");
+    }
+    if ((recieved = recv(instance->fd, buf, RESPONSE_SIZE - 1, 0)) == -1) {
+        ERROR("failed to recieve bytes");
+    }
+    buf[recieved] = '\0';
+    fprintf(stdout, "%s", buf);
 }
 
 char*
@@ -113,7 +137,8 @@ sh_daemon(shell* instance)
         ERROR("error recieving input");
         return false;
     }
-    sh_execute(instance, input);
+    if (instance->type == EXCHANGE) sh_exchange(instance, input);
+    else sh_execute(instance, input);
 
     free(input);
     return true;

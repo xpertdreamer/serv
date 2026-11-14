@@ -16,6 +16,13 @@
 extern "C" {
 #endif
 
+#define RESPONSE_SIZE 1024
+
+typedef enum {
+    EXCHANGE = 0,
+    EXECUTE,
+} sh_type;
+
 typedef enum sh_input_error {
     CNNOT = -1,
     EMPTY = 1,
@@ -27,15 +34,18 @@ typedef uint16_t u32;
 
 typedef struct {
     const char* name;
-    void (*handler)(int);
+    void (*handler)();
 } cmd;
 
+
+// TODO: struct for num commanfs and commands -> union with fd
 struct Shell {
     const char* prompt;
     size_t num_commands;
     cmd* commands;
     u32 prompt_len;
     int fd;
+    sh_type type;
 };
 
 shell*
@@ -49,6 +59,9 @@ sh_change_prompt(shell* instance, const char* newpr);
 
 void
 sh_execute(shell* instance, const char* name);
+
+void
+sh_exhange(shell* instance, const char* name);
 
 bool
 sh_daemon(shell* instance);

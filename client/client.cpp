@@ -21,8 +21,6 @@
 
 #include <string>
 
-extern void help_handler(int);
-
 int sock = -1;
 bool run = true;
 
@@ -39,8 +37,6 @@ main(int argc, char** argv) {
     short status;
     char ip4str[INET_ADDRSTRLEN];
     std::string logfile_name = logdir + get_time() + "_client.log";
-
-    cmd cmds[1] = {{"help", help_handler}};
 
     struct sigaction psa;
     psa.sa_handler = &stop_handler;
@@ -97,7 +93,7 @@ main(int argc, char** argv) {
     }
     freeaddrinfo(ai);
 
-    shell *sh = sh_create(cmds, 1, sock);
+    shell *sh = sh_create(NULL, 0, sock);
     if (sh == NULL) {
         log_error("cannot initialize shell");
         fclose(flog);
