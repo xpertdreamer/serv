@@ -1,3 +1,4 @@
+// NOTE: this version is adapted for client-server music generation
 #ifndef SHELL_H
 #define SHELL_H
 

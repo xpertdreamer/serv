@@ -1,4 +1,4 @@
-// NOTE: this version is adapted to client
+// NOTE: this version is adapted for client-server music generation
 
 #include "util.h"
 #include "shell.h"
@@ -23,18 +23,7 @@ csh_create(int fd)
     sh->prompt = ">";
     sh->prompt_len = (uint32_t)strlen(sh->prompt);
     sh->fd = fd;
-    // if (commands != NULL) {
-    //     sh->num_commands = len;
-    //     sh->commands = (cmd*)malloc(sizeof(cmd) * len);
-    //     if (sh->commands == NULL) {
-    //         free(sh);
-    //         return NULL;
-    //     }
-    //     for (size_t i = 0; i < len; ++i) {
-    //         sh->commands[i] = commands[i];
-    //     }
-    //     sh->type = EXECUTE;
-    // } else sh->type = EXCHANGE;
+
     // TODO: log creation
     return sh;
 }
