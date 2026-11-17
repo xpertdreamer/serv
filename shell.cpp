@@ -207,10 +207,9 @@ ssh_execute(sshell* instance, const char* name)
         }
         if (strcmp(cm.name, name) == 0) {
             DEBUG("called %s", name);
-            std::string cpp_result = instance->commands[i].handler();
-            const char* result = cpp_result.c_str();
-            int len = strlen(result) + 1, sent;
-            if ((sent = send(instance->fd, result, len, 0)) < len) {
+            std::string result = instance->commands[i].handler();
+            int len = result.size() + 1, sent;
+            if ((sent = send(instance->fd, result.c_str(), len, 0)) < len) {
                 ERROR("failed to send all data");
                 if (sent == -1) {
                     ERROR(": %s", strerror(errno));
