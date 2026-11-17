@@ -3,6 +3,7 @@
 #include "util.h"
 #include "shell.h"
 
+#include <cerrno>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -82,6 +83,46 @@ sh_change_prompt(cshell* instance, const char* newpr)
     instance->prompt_len = (u32)strlen(newpr);
 }
 
+int
+sh_recv_ueof(int fd, void* buf, size_t size) {
+    if (buf == NULL || size == 0) {
+        ERROR("cannot recieve buffer for recv");
+        errno = EINVAL;
+        return -1;
+    }
+    if (fd == -1) {
+        ERROR("cannot establish connection with the server");
+        return -1;
+    }
+
+    char* dest = (char*)buf;
+    size_t total = 0;
+    while (total < size) {
+        size_t remainder = size - total;
+        ssize_t peekeed = recv(fd, dest+total, remainder, MSG_PEEK);
+        if (peekeed < 0) {
+            if (errno == EINTR) continue;
+            return -1;
+        } else if (peekeed == 0) return (int)total;
+
+        char* nullterm = (char*)memchr(dest + total, '\0', (size_t)peekeed);
+        size_t to_nt = nullterm ? (size_t)(nullterm - (dest + total) + 1) : (size_t)peekeed;
+
+        int n = recv(fd, dest + total, to_nt, 0);
+        if (n < 0) {
+            if (errno == EINTR) continue;
+            return -1;
+        } else if (n == 0) return (int)total;
+
+        total += (size_t)n;
+
+        if (nullterm) return (int)total;
+    }
+
+    errno = EMSGSIZE;
+    return -1;
+}
+
 void
 sh_exchange(cshell* instance, const char* name) {
     PTR_RECIEVE_FAIL_VOID(instance, sh_exchange);
@@ -96,11 +137,12 @@ sh_exchange(cshell* instance, const char* name) {
         ERROR("failed to send data");
     }
     // TODO: separate function to recieve until linefeed
-    if ((recieved = recv(instance->fd, buf, RESPONSE_SIZE - 1, 0)) == -1) {
+    if ((recieved = sh_recv_ueof(instance->fd, buf, RESPONSE_SIZE - 1)) == -1) {
         ERROR("failed to recieve bytes");
     }
     buf[recieved] = '\0';
     fprintf(stdout, "%s", buf);
+    fflush(stdout);
 }
 
 char*
@@ -166,7 +208,7 @@ ssh_execute(sshell* instance, const char* name)
         if (strcmp(cm.name, name) == 0) {
             DEBUG("called %s", name);
             const char* result = instance->commands[i].handler();
-            int len = strlen(result), sent;
+            int len = strlen(result) + 1, sent;
             if ((sent = send(instance->fd, result, len, 0)) < len) {
                 ERROR("failed to send all data");
                 if (sent == -1) {
@@ -177,7 +219,7 @@ ssh_execute(sshell* instance, const char* name)
         }
     }
     const char* result = SH_ERROR("cannot find command [%s] in current instance", name);
-    int len = strlen(result), sent;
+    int len = strlen(result) + 1, sent;
     if ((sent = send(instance->fd, result, len, 0)) < len) {
         ERROR("failed to send all data");
         if (sent == -1) {
