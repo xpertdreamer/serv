@@ -86,7 +86,7 @@ enum class ERRORS {
     SH_ALLOC = 3,
 };
 
-const std::string
+inline const std::string
 get_time() {
     auto now = std::chrono::system_clock::now();
     const std::string result = std::format("{:%Y-%m-%d_%H:%M:%S}", now);

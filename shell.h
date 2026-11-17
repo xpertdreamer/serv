@@ -1,15 +1,9 @@
 #ifndef SHELL_H
 #define SHELL_H
 
-// Usage:
-// cmd cmds[1] = {{"help", "description", help_handler}}; // initialize vector of commands
-// shell *sh = sh_create(cmds, 1);                        // create new shell
-// sh_change_prompt(sh, '>');                             // change standard propmt if neededx
-// while(sh_daemon(sh));                                  // run daemon to listen user input and execute
-// sh_destroy(sh);                                        // free memory on exit
-
 #include "util.h"
 
+#include <atomic>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -19,8 +13,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#define RESPONSE_SIZE 1024
 
 static inline const char*
 format_error_impl(const char* fmt, ...) {
@@ -34,56 +26,65 @@ format_error_impl(const char* fmt, ...) {
 
 #define SH_ERROR(msg, ...) format_error_impl(ERROR_COLOR msg RESET_COLOR, ##__VA_ARGS__)
 
-typedef enum {
-    EXCHANGE = 0,
-    EXECUTE,
-} sh_type;
-
 typedef enum sh_input_error {
     CNNOT = -1,
     EMPTY = 1,
 } sh_ierr;
 
-typedef struct Shell shell;
+typedef struct ServerShell sshell;
+typedef struct ClientShell cshell;
 
 typedef uint16_t u32;
+
+char*
+sh_get_input();
+
+#define RESPONSE_SIZE 1024
+
+// Client shell section
+struct ClientShell {
+    const char* prompt;
+    u32 prompt_len;
+    int fd;
+};
+
+cshell*
+csh_create(int fd);
+
+void
+csh_destroy(cshell* instance);
+
+void
+csh_change_prompt(cshell* instance, const char* newpr);
+
+void
+csh_exhange(cshell* instance, const char* name);
+
+bool
+csh_daemon(cshell* instance);
+
+// Server shell section
 
 typedef struct {
     const char* name;
     const char* (*handler)();
 } cmd;
 
-
 // TODO: struct for num commanfs and commands -> union with fd
-struct Shell {
-    const char* prompt;
-    size_t num_commands;
+struct ServerShell {
     cmd* commands;
-    u32 prompt_len;
+    size_t num_commands;
     int fd;
-    sh_type type;
 };
 
-shell*
-sh_create(cmd* commands, size_t len, int fd);
+sshell*
+ssh_create(int fd, cmd* commands, size_t len);
 
 void
-sh_destroy(shell* instance);
+ssh_destroy(sshell* instance);
 
 void
-sh_change_prompt(shell* instance, const char* newpr);
-
-void
-sh_execute(shell* instance, const char* name);
-
-void
-sh_exhange(shell* instance, const char* name);
-
-bool
-sh_daemon(shell* instance);
-
-char*
-sh_get_input();
+ssh_execute(sshell* instance, const char* name);
 
 #ifdef __cplusplus
 }

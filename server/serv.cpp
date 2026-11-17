@@ -11,7 +11,6 @@
 #include "shell.h"
 
 #include <arpa/inet.h>
-#include <asm-generic/socket.h>
 #include <atomic>
 #include <csignal>
 #include <cstdio>
@@ -53,7 +52,7 @@ main(void) {
     int yes = 1;
     std::string logfile_name = logdir + get_time() + ".log";
 
-    shell *sh = NULL;
+    sshell *sh = NULL;
     cmd commands[1] = {{"help", help_handler}};
 
     char buffer[SIZE] = {0};
@@ -130,7 +129,7 @@ main(void) {
         }
     }
 
-    sh = sh_create(commands, 1, newsock);
+    sh = ssh_create(newsock, commands, 1);
     log_info("connected");
     // handle connection in another loop
     while (run.load()) {
@@ -145,7 +144,7 @@ main(void) {
         }
         buffer[recieved] = '\0';
         log_info("Recieved: %s", buffer);
-        sh_execute(sh, buffer);
+        ssh_execute(sh, buffer);
         // char send_buf[SIZE*2] = {0};
         // snprintf(send_buf, sizeof(send_buf), "Accepted: %d bytes (%s)", recieved, buffer);
         // int len = strlen(send_buf), sent;
@@ -162,7 +161,7 @@ main(void) {
 end:
     log_info("disconnected");
     log_info("shutting down (%s)", get_time().c_str());
-    sh_destroy(sh);
+    ssh_destroy(sh);
     fclose(flog);
     close(sock);
     return EXIT_SUCCESS;

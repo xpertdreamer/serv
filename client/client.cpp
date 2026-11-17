@@ -10,15 +10,15 @@
 #include "util.h"
 
 #include <arpa/inet.h>
-#include <csignal>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <csignal>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <string>
 
 int sock = -1;
@@ -93,16 +93,16 @@ main(int argc, char** argv) {
     }
     freeaddrinfo(ai);
 
-    shell *sh = sh_create(NULL, 0, sock);
+    cshell *sh = csh_create(sock);
     if (sh == NULL) {
         log_error("cannot initialize shell");
         fclose(flog);
         std::exit((int)ERRORS::SH_ALLOC);
     }
 
-    while(sh_daemon(sh) && run);
+    while(csh_daemon(sh) && run);
 
-    sh_destroy(sh);
+    csh_destroy(sh);
     close(sock);
     fclose(flog);
     return EXIT_SUCCESS;
