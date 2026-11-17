@@ -40,7 +40,7 @@ stop_handler(int sig) {
     std::fflush(stdout);
 }
 
-extern const char* help_handler();
+extern std::string help_handler();
 
 int
 main(void) {

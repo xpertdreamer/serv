@@ -4,12 +4,13 @@
 
 #include "util.h"
 
-#include <atomic>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+
+#include <string>
 
 #ifdef __cplusplus
 extern "C" {
@@ -71,7 +72,7 @@ csh_daemon(cshell* instance);
 
 typedef struct {
     const char* name;
-    const char* (*handler)();
+    std::string (*handler)();
 } cmd;
 
 // TODO: struct for num commanfs and commands -> union with fd
