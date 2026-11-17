@@ -120,7 +120,10 @@ sh_get_input()
     char* buf = NULL;
     size_t s = 0;
 
-    ssize_t read = getline(&buf, &s, stdin);
+    ssize_t read;
+    if ((read = getline(&buf, &s, stdin)) == -1) {
+        return NULL;
+    }
     if (read < 0) {
         if (ferror(stdin))
             ERROR("cannot receive user input");
@@ -152,7 +155,6 @@ csh_daemon(cshell* instance)
 
     char* input = sh_get_input();
     if (input == NULL) {
-        ERROR("error recieving input");
         return false;
     }
     sh_exchange(instance, input);
