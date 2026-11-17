@@ -121,7 +121,8 @@ sh_get_input()
     size_t s = 0;
 
     ssize_t read;
-    if ((read = getline(&buf, &s, stdin)) == -1) {
+    if ((read = getline(&buf, &s, stdin)) == CNNOT) {
+        // ignore SIGINT & return NULL
         return NULL;
     }
     if (read < 0) {
