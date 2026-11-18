@@ -17,4 +17,4 @@ buildir:
 	mkdir -p build/
 
 clean:
-	rm -rf build/serv build/client logs/
+	rm -rf build/ logs/
