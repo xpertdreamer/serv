@@ -20,6 +20,11 @@ enum class rsp_kind : char {
     vecfloat = 'F',
 };
 
+inline bool is_kind(char c)
+{
+    return c == 'T' || c == 'F';
+}
+
 struct Response {
     rsp_kind kind = rsp_kind::text;
     size_t count;

@@ -218,9 +218,9 @@ ssh_execute(sshell* instance, const char* name)
             return;
         }
     }
-    const char* result = SH_ERROR("cannot find command [%s] in current instance", name);
-    int len = strlen(result) + 1, sent;
-    if ((sent = send(instance->fd, result, len, 0)) < len) {
+    std::string result = SH_ERROR("cannot find command [%s] in current instance", name);
+    int len = result.size() + 1, sent;
+    if ((sent = send(instance->fd, result.c_str(), len, 0)) < len) {
         ERROR("failed to send all data");
         if (sent == -1) {
             ERROR(": %s", strerror(errno));
