@@ -25,10 +25,13 @@ inline bool is_kind(char c)
     return c == 'T' || c == 'F';
 }
 
-struct Response {
+struct RRBase {
     rsp_kind kind = rsp_kind::text;
     size_t count;
     std::string body;
+};
+
+struct Response : RRBase {
     // build response with fixed structure
     // Structure: <Kind of response (a.1)>|<Length of the body>|<Body (elements)>
     inline std::string build() const
@@ -58,6 +61,10 @@ struct Response {
 
         return {kind, vector.size(), oss.str()};
     }
+};
+
+struct Request : RRBase {
+
 };
 
 #endif

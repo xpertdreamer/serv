@@ -55,9 +55,6 @@ void
 csh_destroy(cshell* instance)
 {
     if (instance != NULL) {
-        // if (instance->commands != NULL) {
-        //     free(instance->commands);
-        // }
         free(instance);
     }
     // TODO: log destroying
