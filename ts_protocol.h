@@ -2,6 +2,7 @@
 #define TS_PROTO_H
 
 #include <cstddef>
+#include <iomanip>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -25,13 +26,11 @@ inline bool is_kind(char c)
     return c == 'T' || c == 'F';
 }
 
-struct RRBase {
+struct Message {
     rsp_kind kind = rsp_kind::text;
-    size_t count;
+    size_t count = 0;
     std::string body;
-};
 
-struct Response : RRBase {
     // build response with fixed structure
     // Structure: <Kind of response (a.1)>|<Length of the body>|<Body (elements)>
     inline std::string build() const
@@ -41,19 +40,32 @@ struct Response : RRBase {
         return oss.str();
     }
 
+    static bool parse(const std::string& raw, Message& m)
+    {
+        if (is_kind(raw[0]) == false) return false;
+        size_t sep = raw.find(SEPARATOR);
+        if (sep != 1) return false;
+        size_t sep_second = raw.find(SEPARATOR, sep + 1);
+        if (sep_second == std::string::npos) return false;
+        m.kind = (rsp_kind)raw[0];
+        m.count = std::stoul(raw.substr(sep + 1, sep_second - sep - 1));
+        m.body = raw.substr(sep_second + 1);
+        return true;
+    }
+
     // returns builded text response
-    static Response text(std::string t)   { return {rsp_kind::text, 0, std::move(t)}; }
+    static Message text(std::string t)
+    {
+        return {rsp_kind::text, 0, std::move(t)};
+    }
 
     // returns builded text response
     template<typename E>
-    static Response vec(const std::vector<E>& vector, char type) {
+    static Message vec(const std::vector<E>& vector, char type)
+    {
         rsp_kind kind;
-        switch (type) {
-            case 'F': kind = rsp_kind::vecfloat; break;
-            default: kind = rsp_kind::text; break;
-        }
-
         std::ostringstream oss;
+        oss << std::setprecision(9);
         for (size_t i = 0; i < vector.size(); ++i) {
             if (i != 0) oss << SPACE;
             oss << vector[i];
@@ -61,10 +73,19 @@ struct Response : RRBase {
 
         return {kind, vector.size(), oss.str()};
     }
+
+    template<typename E>
+    std::vector<E> as_vec() const
+    {
+        std::vector<E> result;
+        E e;
+        std::istringstream iss(body);
+        while(iss >> e) result.push_back(e);
+        return result;
+    }
 };
 
-struct Request : RRBase {
-
-};
+using Response = Message;
+using Request = Message;
 
 #endif
