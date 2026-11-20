@@ -2,17 +2,14 @@
 
 #include "util.h"
 #include "shell.h"
+#include "ts_protocol.h"
 
-#include <cerrno>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <stdbool.h>
-
-#define SH_CLIENT
-#define SH_SERVER
 
 cshell*
 csh_create(int fd)
@@ -80,46 +77,6 @@ sh_change_prompt(cshell* instance, const char* newpr)
     instance->prompt_len = (u32)strlen(newpr);
 }
 
-int
-sh_recv_ueof(int fd, void* buf, size_t size) {
-    if (buf == NULL || size == 0) {
-        ERROR("cannot recieve buffer for recv");
-        errno = EINVAL;
-        return -1;
-    }
-    if (fd == -1) {
-        ERROR("cannot establish connection with the server");
-        return -1;
-    }
-
-    char* dest = (char*)buf;
-    size_t total = 0;
-    while (total < size) {
-        size_t remainder = size - total;
-        ssize_t peekeed = recv(fd, dest+total, remainder, MSG_PEEK);
-        if (peekeed < 0) {
-            if (errno == EINTR) continue;
-            return -1;
-        } else if (peekeed == 0) return (int)total;
-
-        char* nullterm = (char*)memchr(dest + total, '\0', (size_t)peekeed);
-        size_t to_nt = nullterm ? (size_t)(nullterm - (dest + total) + 1) : (size_t)peekeed;
-
-        int n = recv(fd, dest + total, to_nt, 0);
-        if (n < 0) {
-            if (errno == EINTR) continue;
-            return -1;
-        } else if (n == 0) return (int)total;
-
-        total += (size_t)n;
-
-        if (nullterm) return (int)total;
-    }
-
-    errno = EMSGSIZE;
-    return -1;
-}
-
 void
 sh_exchange(cshell* instance, const char* name) {
     PTR_RECIEVE_FAIL_VOID(instance, sh_exchange);
@@ -128,17 +85,18 @@ sh_exchange(cshell* instance, const char* name) {
         return;
     }
 
-    int len = strlen(name), sent, recieved;
-    char buf[RESPONSE_SIZE];
-    if ((sent = send(instance->fd, name, len, 0)) < len) {
+    Message request = Message::text(name);
+    if ((send_msg(instance->fd, request)) == false) {
         ERROR("failed to send data");
+        return;
     }
-    // TODO: separate function to recieve until linefeed
-    if ((recieved = sh_recv_ueof(instance->fd, buf, RESPONSE_SIZE - 1)) == -1) {
+
+    Message answer;
+    if ((recv_msg(instance->fd, answer)) == false) {
         ERROR("failed to recieve bytes");
+        return;
     }
-    buf[recieved] = '\0';
-    fprintf(stdout, "%s", buf);
+    fprintf(stdout, "%s", answer.body.c_str());
     fflush(stdout);
 }
 
@@ -151,6 +109,7 @@ sh_get_input()
     ssize_t read;
     if ((read = getline(&buf, &s, stdin)) == CNNOT) {
         // ignore SIGINT & return NULL
+        free(buf);
         return NULL;
     }
     if (read < 0) {
@@ -205,22 +164,16 @@ ssh_execute(sshell* instance, const char* name)
         if (strcmp(cm.name, name) == 0) {
             DEBUG("called %s", name);
             std::string result = instance->commands[i].handler();
-            int len = result.size() + 1, sent;
-            if ((sent = send(instance->fd, result.c_str(), len, 0)) < len) {
+            Message msg_to_sent = Message::text(result);
+            if ((send_msg(instance->fd, msg_to_sent)) == false) {
                 ERROR("failed to send all data");
-                if (sent == -1) {
-                    ERROR(": %s", strerror(errno));
-                }
             }
             return;
         }
     }
-    std::string result = SH_ERROR("cannot find command [%s] in current instance", name);
-    int len = result.size() + 1, sent;
-    if ((sent = send(instance->fd, result.c_str(), len, 0)) < len) {
+
+    Message failed = Message::text(SH_ERROR("cannot find command [%s] in current instance", name));
+    if ((send_msg(instance->fd, failed)) == false) {
         ERROR("failed to send all data");
-        if (sent == -1) {
-            ERROR(": %s", strerror(errno));
-        }
     }
 }

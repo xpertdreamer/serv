@@ -9,6 +9,7 @@
 #include "log.h"
 #include "util.h"
 #include "shell.h"
+#include "ts_protocol.h"
 
 #include <arpa/inet.h>
 #include <atomic>
@@ -22,10 +23,9 @@
 #include <sys/types.h>
 #include <netdb.h>
 #include <unistd.h>
-
 #include <string>
 
-constexpr size_t SIZE = 1024;
+
 constexpr const char* PORT_STR = "8080";
 constexpr char ipv4[INET_ADDRSTRLEN] = "127.0.0.1";    // 16 bytes localhost
 constexpr unsigned int BACKLOG = 1;   // 1 client
@@ -54,9 +54,6 @@ main(void) {
 
     sshell *sh = NULL;
     cmd commands[1] = {{"help", help_handler}};
-
-    char buffer[SIZE] = {0};
-    int recieved;
 
     struct sigaction psa;
     psa.sa_handler = &stop_handler;
@@ -133,18 +130,14 @@ main(void) {
     log_info("connected");
     // handle connection in another loop
     while (run.load()) {
-        if ((recieved = recv(newsock, &buffer, SIZE - 1, 0)) <= 0) {
-            if (recieved < 0 && errno == EINTR) {
-                if (!run.load()) break;
-                continue;
-            }
-            if (recieved == 0) log_info("client closed the connection");
-            else log_warn("recv failed: %s", std::strerror(errno));
+        Message request;
+        if (!recv_msg(newsock,request)) {
+            if (!run.load()) break;
+            log_warn("recv failed: %s", std::strerror(errno));
             break;
         }
-        buffer[recieved] = '\0';
-        log_info("Recieved: %s", buffer);
-        ssh_execute(sh, buffer);
+        log_info("Recieved: [%c|%zu]%s", (char)request.kind, request.count, request.body.c_str());
+        ssh_execute(sh, request.body.c_str());
         // char send_buf[SIZE*2] = {0};
         // snprintf(send_buf, sizeof(send_buf), "Accepted: %d bytes (%s)", recieved, buffer);
         // int len = strlen(send_buf), sent;

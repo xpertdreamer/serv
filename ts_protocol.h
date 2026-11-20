@@ -70,7 +70,7 @@ struct Message {
     template<typename E>
     static Message vec(const std::vector<E>& vector, char type)
     {
-        rsp_kind kind;
+        rsp_kind kind = rsp_kind::vecfloat;
         std::ostringstream oss;
         oss << std::setprecision(9);
         for (size_t i = 0; i < vector.size(); ++i) {
@@ -111,7 +111,7 @@ inline static bool send_ueof(int fd, const void* buffer, size_t n)
 inline bool send_msg(int fd, const Message& m)
 {
     auto packet = m.build();
-    uint32_t len = (uint32_t)packet.size();
+    uint32_t len = htonl((uint32_t)packet.size());
     return send_ueof(fd, &len, SYNCPACKET_SIZE)
         && send_ueof(fd, packet.data(), packet.size());
 }
@@ -120,10 +120,14 @@ inline static bool recv_ueof(int fd, void* buffer, size_t n)
 {
     auto *b = (char*)buffer;
     while (n) {
-        ssize_t sent;
-        if ((sent = recv(fd, b, n, 0)) <= 0) return false;
-        b += sent;
-        n -= (size_t)sent;
+        ssize_t received = recv(fd, b, n, 0);
+        if (received < 0) {
+            if (errno == EINTR) continue;
+            return false;
+        }
+        if (received == 0) return false;
+        b += received;
+        n -= (size_t)received;
     }
     return true;
 }

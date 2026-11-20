@@ -38,9 +38,6 @@ typedef struct ClientShell cshell;
 
 typedef uint16_t u32;
 
-int
-sh_recv_ueof(int fd, void* buf, size_t size);
-
 char*
 sh_get_input();
 
