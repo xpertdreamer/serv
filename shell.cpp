@@ -143,7 +143,7 @@ csh_daemon(cshell* instance)
 
     char* input = sh_get_input();
     if (input == NULL) {
-        return false;
+        return true;
     }
     sh_exchange(instance, input);
 
