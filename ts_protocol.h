@@ -1,14 +1,21 @@
 #ifndef TS_PROTO_H
 #define TS_PROTO_H
 
+#include <cerrno>
 #include <cstddef>
+#include <cstdint>
 #include <iomanip>
+#include <netinet/in.h>
 #include <sstream>
 #include <string>
+#include <sys/socket.h>
 #include <vector>
+#include <arpa/inet.h>
 
 constexpr char SEPARATOR = '|';
 constexpr char SPACE = ' ';
+
+constexpr int SYNCPACKET_SIZE = 4;
 
 /*
   a.1
@@ -87,5 +94,47 @@ struct Message {
 
 using Response = Message;
 using Request = Message;
+
+inline static bool send_ueof(int fd, const void* buffer, size_t n)
+{
+    auto *b = (const char*)buffer;
+    while (n) {
+        ssize_t sent;
+        if ((sent = send(fd, b, n, 0)) < 0 && errno == EINTR) continue;
+        if (sent <= 0) return false;
+        b += sent;
+        n -= (size_t)sent;
+    }
+    return true;
+}
+
+inline bool send_msg(int fd, const Message& m)
+{
+    auto packet = m.build();
+    uint32_t len = (uint32_t)packet.size();
+    return send_ueof(fd, &len, SYNCPACKET_SIZE)
+        && send_ueof(fd, packet.data(), packet.size());
+}
+
+inline static bool recv_ueof(int fd, void* buffer, size_t n)
+{
+    auto *b = (char*)buffer;
+    while (n) {
+        ssize_t sent;
+        if ((sent = recv(fd, b, n, 0)) <= 0) return false;
+        b += sent;
+        n -= (size_t)sent;
+    }
+    return true;
+}
+
+inline bool recv_msg(int fd, Message& m)
+{
+    uint32_t len;
+    if (!recv_ueof(fd, &len, SYNCPACKET_SIZE)) return false;
+    len = ntohl(len);
+    std::string recieved(len, '\0');
+    return recv_ueof(fd, recieved.data(), len) && Message::parse(recieved, m);
+}
 
 #endif
