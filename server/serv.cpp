@@ -130,13 +130,15 @@ main(void) {
     log_info("connected");
     // handle connection in another loop
     while (run.load()) {
+        // TODO: fix
         Message request;
         if (!recv_msg(newsock,request)) {
             if (!run.load()) break;
-            log_warn("recv failed: %s", std::strerror(errno));
+            log_warn("recv status: %s", std::strerror(errno));
+            if (errno >= 0)
+                log_info("Recieved: [%c|%zu]%s", (char)request.kind, request.count, request.body.c_str());
             break;
         }
-        log_info("Recieved: [%c|%zu]%s", (char)request.kind, request.count, request.body.c_str());
         ssh_execute(sh, request.body.c_str());
         // char send_buf[SIZE*2] = {0};
         // snprintf(send_buf, sizeof(send_buf), "Accepted: %d bytes (%s)", recieved, buffer);
