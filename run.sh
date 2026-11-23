@@ -2,4 +2,4 @@
 
 cd "$(dirname "$0")"
 
-./build/server >/dev/null 2>&1 & sleep 1; ./build/client localhost 8080
+./build/server >/dev/null 2>&1 & sleep 1; ./build/client localhost 4321
