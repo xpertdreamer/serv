@@ -1,13 +1,7 @@
-use std::io::{self, ErrorKind, Write};
-use crate::util::error;
-
-const DEFAULT_PROMPT: &str = ">";
-const EMPTY: usize = 0;
-
-pub enum InputError {
-    IoError(io::Error),
-    Empty,
-}
+use std::{io::{self, ErrorKind, Write}, net::TcpStream};
+use common::protocol::*;
+use common::util::*;
+use crate::base::*;
 
 pub fn get_input() -> Result<Option<String>, InputError>  {
     let mut buffer = String::new();
@@ -33,21 +27,36 @@ pub fn get_input() -> Result<Option<String>, InputError>  {
     }
 }
 
+// NOTE: lifetime annotations sucks
 pub struct ClientShell {
     prompt: String,
+    stream: TcpStream
 }
 
 impl ClientShell {
-    pub fn create() -> Self {
-        Self { prompt: DEFAULT_PROMPT.into() }
+    pub fn create(stream: TcpStream) -> Self {
+        Self { prompt: DEFAULT_PROMPT.into(), stream: stream }
     }
 
     pub fn change_prompt(&mut self, prompt: impl Into<String>) {
         self.prompt = prompt.into();
     }
 
-    pub fn exchange(&mut self, _name: impl Into<String>) {
-        eprintln!("{}", error("TODO"));
+    pub fn exchange(&mut self, name: impl Into<String>) {
+        let request: Message = Message::with_text(name);
+        if !send_msg(&mut self.stream, &request) {
+            eprintln!("{}", error("failed to send data"));
+            return;
+        }
+        let mut answer: Message = Message::new();
+        if !recv_msg(&mut self.stream, &mut answer) {
+            eprintln!("{}", error("failed to recieve some bytes"));
+            return;
+        }
+
+        println!("{}", answer.body);
+        #[allow(unused)]
+        io::stdout().flush();
     }
 
     pub fn daemon(&mut self) -> bool {
@@ -65,4 +74,6 @@ impl ClientShell {
             }
         }
     }
+
+    // TODO: recieve vector
 }

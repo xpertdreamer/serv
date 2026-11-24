@@ -37,10 +37,14 @@ pub fn is_kind(c: char) -> bool {
 pub struct Message {
     kind: RspKind,
     body_len: usize,
-    body: String,
+    pub body: String,
 }
 
 impl Message {
+    pub fn new() -> Self {
+        Self { kind: RspKind::Text, body_len: 0, body: String::new() }
+    }
+
     pub fn build(&self) -> String {
         format!("{}{}{}{}{}",
                 char::from(self.kind),
