@@ -24,17 +24,18 @@ impl ServerShell {
 
     pub fn execute(&mut self, name: impl AsRef<str>) {
         let target = name.as_ref();
-        for cmd in &self.commands {
-            if cmd.name == target {
-                let result = (cmd.handler)();
-                let message: Message = Message::with_text(result);
-                if !send_msg(&mut self.stream, &message) {
-                    eprintln!("{}", error("failed to send all data"));
-                    return;
-                }
+
+        let text = match self.commands.iter().find(|c| c.name == target) {
+            Some(cmd) => (cmd.handler)(),
+            None => {
+                eprintln!("{}", error(format!("unknown command [{}]", target)));
+                format!("{}", error(format!("unknown command [{}]", target)))
             }
+        };
+
+        if !send_msg(&mut self.stream, &Message::with_text(text)) {
+            eprintln!("{}", error("failed to send all data"));
         }
-        eprintln!("{}", error(format!("unkonwn command [{}]", target)));
     }
 
     // TODO: send vector

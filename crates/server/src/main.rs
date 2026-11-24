@@ -29,7 +29,6 @@ fn help_handler() -> String {
 }
 
 fn main() -> std::io::Result<()> {
-    // TODO: unwrap?
     let addr: SocketAddr = SERVER_ADDRESS.parse().map_err(|e| Error::new(ErrorKind::InvalidInput, e))?;
     let listener = reuse(addr);
     let (mut sock, _) = listener?.accept()?;
