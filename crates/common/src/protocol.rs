@@ -81,7 +81,7 @@ impl Message {
         let body = t.into();
         Self {
             kind: RspKind::Text,
-            body_len: 0,
+            body_len: body.len(),
             body: body,
         }
     }

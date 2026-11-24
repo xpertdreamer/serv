@@ -4,8 +4,8 @@ use common::{protocol::{Message, send_msg}, util::error};
 pub type Handler = fn() -> String;
 
 pub struct Command {
-    name: String,
-    handler: Handler,
+    pub name: String,
+    pub handler: Handler,
 }
 
 pub struct ServerShell {

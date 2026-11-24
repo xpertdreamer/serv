@@ -1,4 +1,5 @@
-use std::{io::{self, BufRead, BufReader, Write}, net::TcpStream};
+use std::net::TcpStream;
+use shell::cshell::*;
 
 fn print_usage() {
     eprintln!("usage: client <host address> <port>")
@@ -20,26 +21,12 @@ fn main() -> std::io::Result<()> {
             std::process::exit(1);
         }
     };
-    let mut sock = TcpStream::connect(format!("{host}:{port}"))?;
+    let sock = TcpStream::connect(format!("{host}:{port}"))?;
     println!("connected to {host}:{port}");
 
-    let mut reader = BufReader::new(sock.try_clone()?);
-    let mut line = String::new();
-    let mut response = String::new();
-    let stdin = io::stdin();
-
-    loop {
-        line.clear();
-        if stdin.lock().read_line(&mut line)? == 0 { break; }
-        if line.trim().is_empty() { continue;  }
-        sock.write_all(line.as_bytes())?;
-
-        response.clear();
-        if reader.read_line(&mut response)? == 0 {
-            println!("closed");
-            break;
-        }
-        print!("{response}");
+    let mut shell = ClientShell::create(sock);
+    while shell.daemon() {
+        // pass
     }
 
     Ok(())
