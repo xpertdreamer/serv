@@ -50,7 +50,6 @@ impl Message {
                 self.body)
     }
 
-    // TODO: check body len
     pub fn parse(raw: &str) -> Option<Self> {
         let mut chars = raw.chars();
         let first = chars.next()?;
@@ -63,11 +62,15 @@ impl Message {
         let rest = chars.as_str();
         let (len, body) = rest.split_once(SEPARATOR)?;
         let body_len = len.parse::<usize>().ok()?;
-        Some (Self {
-            kind,
-            body_len,
-            body: body.to_string()
-        })
+        if body_len == body.len() {
+            Some (Self {
+                kind,
+                body_len,
+                body: body.to_string()
+            })
+        } else {
+            None
+        }
     }
 
     pub fn with_text(t: impl Into<String>) -> Self {
