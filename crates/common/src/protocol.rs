@@ -1,4 +1,7 @@
+use std::{fmt::Write, io::{Read, Write as IoWrite}, net::TcpStream, num::ParseFloatError};
+
 const SEPARATOR: char = '|';
+const SPACE: char = ' ';
 
 #[derive(Copy, Clone)]
 enum RspKind {
@@ -47,7 +50,8 @@ impl Message {
                 self.body)
     }
 
-    fn parse(raw: &str) -> Option<Self> {
+    // TODO: check body len
+    pub fn parse(raw: &str) -> Option<Self> {
         let mut chars = raw.chars();
         let first = chars.next()?;
         let kind = RspKind::try_from(first).ok()?;
@@ -66,7 +70,7 @@ impl Message {
         })
     }
 
-    fn text(t: impl Into<String>) -> Self {
+    pub fn with_text(t: impl Into<String>) -> Self {
         let body = t.into();
         Self {
             kind: RspKind::Text,
@@ -75,5 +79,69 @@ impl Message {
         }
     }
 
+    pub fn with_vec(vector: &[f32]) -> Self {
+        let mut s = String::with_capacity(vector.len() * 12);
+        for (i, x) in vector.iter().enumerate() {
+            if i != 0 {
+                s.push(SPACE);
+            }
+            let _ = write!(s, "{}", x);
+        }
+        Self {
+            kind: RspKind::VecFloat,
+            body_len: vector.len(),
+            body: s
+        }
+    }
 
+    pub fn as_vec(&self) -> Result<Vec<f32>, ParseFloatError> {
+        let mut res = Vec::with_capacity(self.body_len);
+        for token in self.body.split(SPACE) {
+            if !token.is_empty() {
+                res.push(token.parse::<f32>()?);
+            }
+        }
+        Ok(res)
+    }
+}
+
+fn send_ueof(stream: &mut TcpStream, buffer: &[u8]) -> Result<(), String> {
+    stream.write_all(buffer).map_err(|x| x.to_string())
+}
+
+pub fn send_msg(stream: &mut TcpStream, m: &Message) -> bool {
+    let packet = m.build();
+    let Ok(len) = u32::try_from(packet.len()) else {
+        return false;
+    };
+    send_ueof(stream, &len.to_be_bytes()).is_ok()
+        && send_ueof(stream, packet.as_bytes()).is_ok()
+}
+
+fn recv_ueof(stream: &mut TcpStream, buf: &mut [u8]) -> Result<(), String> {
+    stream.read_exact(buf).map_err(|x| x.to_string())
+}
+
+pub fn recv_msg(stream: &mut TcpStream, msg: &mut Message) -> bool {
+    let mut len_bytes = [0u8; 4];
+    if recv_ueof(stream, &mut len_bytes).is_err() {
+        return false;
+    }
+    let len = u32::from_be_bytes(len_bytes) as usize;
+
+    let mut buf = vec![0u8; len];
+    if recv_ueof(stream, &mut buf).is_err() {
+        return false;
+    }
+
+    let Ok(result) = String::from_utf8(buf) else {
+        return false;
+    };
+
+    if let Some(parsed) = Message::parse(&result) {
+        *msg = parsed;
+        true
+    } else {
+        false
+    }
 }
