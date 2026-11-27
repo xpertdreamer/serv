@@ -4,7 +4,7 @@ const SEPARATOR: char = '|';
 const SPACE: char = ' ';
 
 #[derive(Default, Copy, Clone)]
-enum RspKind {
+pub enum RspKind {
     #[default] Text,
     VecFloat,
 }
@@ -42,6 +42,10 @@ pub struct Message {
 }
 
 impl Message {
+    pub fn kind(&self) -> RspKind {
+        self.kind
+    }
+
     pub fn build(&self) -> String {
         format!("{}{}{}{}{}",
                 char::from(self.kind),
@@ -63,12 +67,12 @@ impl Message {
         let rest = chars.as_str();
         let (len, body) = rest.split_once(SEPARATOR)?;
         let body_len = len.parse::<usize>().ok()?;
-        if body_len == body.len() {
-            Some (Self {
-                kind,
-                body_len,
-                body: body.to_string()
-            })
+        let expected = match kind {
+            RspKind::Text => body.len(),
+            RspKind::VecFloat => body.split(SPACE).filter(|t| !t.is_empty()).count(),
+        };
+        if body_len == expected {
+            Some (Self { kind, body_len, body: body.to_string() })
         } else {
             None
         }
