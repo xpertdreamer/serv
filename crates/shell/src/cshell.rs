@@ -42,16 +42,13 @@ impl ClientShell {
         self.prompt = prompt.into();
     }
 
+    fn on_vec(&mut self, vec: Vec<f32>) {
+        println!("recieved vector with len {}", vec.len());
+        for v in vec.iter() {
+            print!("{} ", v);
+        }
+    }
 
-    /* TODO: map with commands
-
-    It has to have two fields: command name (cid) & expected result type (RspKind)
-    Exchange recieving part will have two branches depending on command type:
-        1. Text Part - being processed as usual: recieve->print->return
-        2. Vector Part - for this project vector will represent music
-        and because of it we have to treat recieved vector as a waveform.
-        Thats means pipeline will look like: recieve->parse->play->return.
-     */
     pub fn exchange(&mut self, name: impl Into<String>) {
         let request: Message = Message::with_text(name);
         if !send_msg(&mut self.stream, &request) {
@@ -64,9 +61,17 @@ impl ClientShell {
             return;
         }
 
-        println!("{}", answer.body);
-        #[allow(unused)]
-        io::stdout().flush();
+        match answer.kind() {
+            RspKind::Text => {
+                println!("{}", answer.body);
+                #[allow(unused)]
+                io::stdout().flush();
+            },
+            RspKind::VecFloat => match answer.as_vec() {
+                Ok(o) => self.on_vec(o),
+                Err(e) => eprintln!("{}", error(format!("bad: {}", e))),
+            }
+        }
     }
 
     pub fn daemon(&mut self) -> bool {
@@ -84,6 +89,4 @@ impl ClientShell {
             }
         }
     }
-
-    // TODO: recieve vector
 }
