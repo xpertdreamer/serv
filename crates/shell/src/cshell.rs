@@ -30,7 +30,7 @@ pub fn get_input() -> Result<Option<String>, InputError>  {
 // NOTE: lifetime annotations sucks
 pub struct ClientShell {
     prompt: String,
-    stream: TcpStream
+    stream: TcpStream,
 }
 
 impl ClientShell {
@@ -58,7 +58,7 @@ impl ClientShell {
             eprintln!("{}", error("failed to send data"));
             return;
         }
-        let mut answer: Message = Message::new();
+        let mut answer: Message = Message::default();
         if !recv_msg(&mut self.stream, &mut answer) {
             eprintln!("{}", error("failed to recieve some bytes"));
             return;

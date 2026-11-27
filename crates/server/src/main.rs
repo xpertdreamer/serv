@@ -47,7 +47,7 @@ fn main() -> std::io::Result<()> {
         }
     };
     loop {
-        let mut request = Message::new();
+        let mut request = Message::default();
         if !recv_msg(&mut sock, &mut request) {
             break;
         }
