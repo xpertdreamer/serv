@@ -3,9 +3,9 @@ use std::{fmt::Write, io::{Read, Write as IoWrite}, net::TcpStream, num::ParseFl
 const SEPARATOR: char = '|';
 const SPACE: char = ' ';
 
-#[derive(Copy, Clone)]
+#[derive(Default, Copy, Clone)]
 enum RspKind {
-    Text,
+    #[default] Text,
     VecFloat,
 }
 
@@ -34,6 +34,7 @@ pub fn is_kind(c: char) -> bool {
     RspKind::try_from(c).is_ok()
 }
 
+#[derive(Default)]
 pub struct Message {
     kind: RspKind,
     body_len: usize,
@@ -41,10 +42,6 @@ pub struct Message {
 }
 
 impl Message {
-    pub fn new() -> Self {
-        Self { kind: RspKind::Text, body_len: 0, body: String::new() }
-    }
-
     pub fn build(&self) -> String {
         format!("{}{}{}{}{}",
                 char::from(self.kind),
