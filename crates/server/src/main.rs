@@ -29,9 +29,12 @@ fn help_handler() -> String {
 }
 
 fn wave_handler() -> Vec<f32> {
-    (0..50).map(|i| {
-        let p = (i as f32 / 50.0) * std::f32::consts::TAU;
-        p.sin()
+    (0..882_000).map(|i| {
+        let p = (i as f32 / 44_100.0) * std::f32::consts::TAU * 261.0;
+        let p2 = (i as f32 / 44_100.0) * std::f32::consts::TAU * 329.0;
+        let p3 = (i as f32 / 44_100.0) * std::f32::consts::TAU * 391.0;
+
+        (p.sin() + p2.sin() + p3.sin()) / 3.0
     }).collect()
 }
 

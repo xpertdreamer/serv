@@ -32,14 +32,6 @@ impl ServerShell {
     pub fn execute(&mut self, name: impl AsRef<str>) {
         let target = name.as_ref();
 
-        // let text = match self.commands.iter().find(|c| c.name == target) {
-        //     Some(cmd) => (cmd.handler)(),
-        //     None => {
-        //         eprintln!("{}", error(format!("unknown command [{}]", target)));
-        //         format!("{}", error(format!("unknown command [{}]", target)))
-        //     }
-        // };
-
         let msg = if let Some(c) = self.commands.iter().find(|i| i.name == target) {
             Message::with_text((c.handler)())
         } else if let Some(c) = self.vcommands.iter().find(|i| i.name == target) {
@@ -53,6 +45,4 @@ impl ServerShell {
             eprintln!("{}", error("failed to send all data"));
         }
     }
-
-    // TODO: send vector
 }
