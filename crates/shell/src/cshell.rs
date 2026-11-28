@@ -1,7 +1,7 @@
 use std::{io::{self, ErrorKind, Write}, net::TcpStream, num::NonZero};
 use common::protocol::*;
 use common::util::*;
-use rodio::{DeviceSinkBuilder, Player, buffer::SamplesBuffer};
+use rodio::{DeviceSinkBuilder, Player, buffer::SamplesBuffer, cpal::SAMPLE_RATE_CD};
 use crate::base::*;
 
 pub fn get_input() -> Result<Option<String>, InputError>  {
@@ -32,11 +32,14 @@ pub fn get_input() -> Result<Option<String>, InputError>  {
 pub struct ClientShell {
     prompt: String,
     stream: TcpStream,
+    sm_player: Player
 }
 
 impl ClientShell {
     pub fn create(stream: TcpStream) -> Self {
-        Self { prompt: DEFAULT_PROMPT.into(), stream: stream }
+        let sink = DeviceSinkBuilder::open_default_sink()
+            .expect("default audio stream failed");
+        Self { prompt: DEFAULT_PROMPT.into(), stream: stream, sm_player: Player::connect_new(sink.mixer())}
     }
 
     pub fn change_prompt(&mut self, prompt: impl Into<String>) {
@@ -45,16 +48,15 @@ impl ClientShell {
 
     fn on_vec(&mut self, vec: Vec<f32>){
         println!("recieved vector with len {}", vec.len());
-        for v in vec.iter() {
-            print!("{} ", v);
-        }
-        let sample_rate = NonZero::new(SAMPLE_RATE).unwrap();
-        let channels = NonZero::new(CHANNELS).unwrap();
-        let sink = DeviceSinkBuilder::open_default_sink().unwrap();
-        let player = Player::connect_new(sink.mixer());
-        let source = SamplesBuffer::new(channels, sample_rate, vec);
-        player.append(source);
-        player.sleep_until_end();
+        // for v in vec.iter() {
+        //     print!("{} ", v);
+        // }
+        let source = SamplesBuffer::new(
+            NonZero::new(CHANNELS).unwrap(),
+            NonZero::new(SAMPLE_RATE_CD).unwrap(),
+            vec);
+        self.sm_player.append(source);
+        // player.sleep_until_end();
     }
 
     pub fn exchange(&mut self, name: impl Into<String>) {
